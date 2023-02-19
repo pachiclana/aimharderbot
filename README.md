@@ -1,6 +1,6 @@
 # FitBot
 
-Python script to automate your booking sessions in [aimharder.com](http://aimharder.com) platform
+Python script to automate your booking sessions in [aimharder.com](http://aimharder.com) platform. The docker container is ready to run in Raspberry Pi 3b+
 
 ## Usage
 
