@@ -1,10 +1,11 @@
-FROM python:latest
+FROM arm32v7/python
 
 WORKDIR /usr/src/app
 
 COPY src /usr/src/app/src
-COPY Makefile requirements.txt requirements-tests.txt setup.cfg /usr/src/app/
 
-RUN make venv
+RUN pip install beautifulsoup4==4.11.0
+RUN pip install requests==2.28.0
 
-CMD ["make", "run"]
+ENTRYPOINT [ "python3", "./src/main.py"]
+
