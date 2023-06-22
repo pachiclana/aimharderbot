@@ -49,9 +49,6 @@ if __name__ == "__main__":
      --box-id 3984
      --booking-goal '{"0":{"time": "1815", "name": "Provenza"}}'
     """
-
-    #random comment to test
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--email", required=True, type=str)
     parser.add_argument("--password", required=True, type=str)
