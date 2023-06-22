@@ -20,7 +20,10 @@ def get_booking_goal_time(day: datetime, booking_goals):
 
 def get_class_to_book(classes: list[dict], target_time: str, class_name: str):
     classes = list(filter(lambda _class: target_time in _class["timeid"], classes))
-    _class = list(filter(lambda _class: class_name in _class["className"], classes))
+    if len(classes) > 1:
+        _class = list(filter(lambda _class: class_name in _class["className"], classes))
+    else:
+        _class = classes
     if len(_class) == 0:
         raise NoBookingGoal
     return _class[0]["id"]
