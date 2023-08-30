@@ -3,12 +3,12 @@ import json
 import os
 import traceback
 import logging
+import logging.handlers as handlers
 from datetime import datetime, timedelta
 import telebot
 
 from client import AimHarderClient
 from exceptions import NoBookingGoal, NoTrainingDay
-
 
 def get_booking_goal_time(day: datetime, booking_goals):
     #We take the future day we want to book the class on and check if it exists in the input json parameters
@@ -87,20 +87,41 @@ def main(email, password, booking_goals, box_name, box_id, days_in_advance, noti
     except Exception as e:
         if notify_on_telegram:
             bot.send_message(telegram_chat_id, f"\U0000274C Something went wrong. Target: {target_day.strftime('%A')} - {target_day.strftime('%d %b %Y')}")
-            bot.send_message(telegram_chat_id, str(traceback.format_exc()), parse_mode='None')
+            bot.send_message(telegram_chat_id, traceback.format_exc(), parse_mode='None')
         logger.error(traceback.format_exc())
+
+#We set up the loggers
+def init_logger():
+
+    logger = logging.getLogger('aimharder-bot')
+    logger.setLevel(logging.DEBUG)
+    req_logger = logging.getLogger("requests")
+    req_logger.setLevel(logging.DEBUG)
+    url_logger = logging.getLogger("urllib3")
+    url_logger.setLevel(logging.DEBUG)
+
+    #20Mb = 20971520 bytes
+    #15Mb = 15728640 bytes
+
+    #We set the logs folder directory to be on the same folder of the execution file
+    log_dir = os.path.join(os.path.normpath(os.getcwd() + os.sep), 'logs')
+    log_fname = os.path.join(log_dir, 'aimharder-bot.log')
+
+    logHandler = handlers.RotatingFileHandler(log_fname, maxBytes=15728640, backupCount=1)
+    logHandler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s - %(message)s')
+    logHandler.setFormatter(formatter)
+
+    logger.addHandler(logHandler)
+    req_logger.addHandler(logHandler)
+    url_logger.addHandler(logHandler)
+    return logger
 
 
 if __name__ == "__main__":
+ 
+    logger = init_logger()
 
-    # log_dir = os.path.join(os.path.normpath(os.getcwd() + os.sep + os.pardir), 'logs')
-    # log_fname = os.path.join(log_dir, 'aimharder-bot.log')
-    logging.basicConfig(filename='aimharder-bot.log',
-                        filemode='a',
-                        format='%(asctime)s,%(msecs)d %(levelname)s %(name)s - %(message)s',
-                        level=logging.DEBUG)
-    logger = logging.getLogger('aimharder-bot')
-    
     parser = argparse.ArgumentParser()
     parser.add_argument("--email", required=True, type=str)
     parser.add_argument("--password", required=True, type=str)
