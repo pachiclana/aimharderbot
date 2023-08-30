@@ -1,8 +1,8 @@
 from datetime import datetime
 from http import HTTPStatus
-
 from bs4 import BeautifulSoup
 from requests import Session
+import logging
 
 from constants import (
     LOGIN_ENDPOINT,
@@ -20,11 +20,14 @@ from exceptions import (
 
 
 class AimHarderClient:
+
     def __init__(self, email: str, password: str, box_id: int, box_name: str):
+        self.logger = logging.getLogger('aimharder-bot')
+        
         self.session = self._login(email, password)
         self.box_id = box_id
         self.box_name = box_name
-
+        
     @staticmethod
     def _login(email: str, password: str):
         session = Session()
@@ -54,7 +57,9 @@ class AimHarderClient:
                 "familyId": "",
             },
         )
-        return response.json().get("bookings")
+        bookings = response.json().get("bookings")
+        self.logger.info(f"Retrieved {len(bookings)} classes for day {target_day.strftime('%Y-%m-%d')}")
+        return bookings
 
     def book_class(self, target_day: datetime, class_id: str) -> bool:
         response = self.session.post(
@@ -69,8 +74,14 @@ class AimHarderClient:
         if response.status_code == HTTPStatus.OK:
             response = response.json()
             if "bookState" in response and response["bookState"] == -2:
+                self.logger.error(f"Booking unsuccesful. There is no available credits. Max numbe of booked sessions reached.")
                 raise BookingFailed(MESSAGE_BOOKING_FAILED_NO_CREDIT)
+            if "bookState" in response and response["bookState"] == -12:
+                self.logger.error(f"Booking unsuccesful. You cannot book the same session twice.")
+                raise BookingFailed(response['errorMssg'])
             if "errorMssg" not in response and "errorMssgLang" not in response:
                 # booking went fine
-                return
+                self.logger.info(f"Booking completed successfully.")
+                return True
+        self.logger.error(f"UNKNOWN ERROR!!!!!.")
         raise BookingFailed(MESSAGE_BOOKING_FAILED_UNKNOWN)
