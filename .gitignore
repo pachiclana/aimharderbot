@@ -3,3 +3,4 @@ __pycache__
 .idea
 book-sessions.sh
 .vscode/
+/logs
