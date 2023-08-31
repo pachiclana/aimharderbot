@@ -102,12 +102,13 @@ def init_logger():
 
     #20Mb = 20971520 bytes
     #15Mb = 15728640 bytes
+    #5Mb = 5242880 bytes
 
     #We set the logs folder directory to be on the same folder of the execution file
     log_dir = os.path.join(os.path.normpath(os.getcwd() + os.sep), 'logs')
     log_fname = os.path.join(log_dir, 'aimharder-bot.log')
 
-    logHandler = handlers.RotatingFileHandler(log_fname, maxBytes=15728640, backupCount=1)
+    logHandler = handlers.RotatingFileHandler(log_fname, maxBytes=5242880, backupCount=1)
     logHandler.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s - %(message)s')
     logHandler.setFormatter(formatter)
