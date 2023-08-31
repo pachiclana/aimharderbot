@@ -108,6 +108,13 @@ def init_logger():
     log_dir = os.path.join(os.path.normpath(os.getcwd() + os.sep), 'logs')
     log_fname = os.path.join(log_dir, 'aimharder-bot.log')
 
+    # Check whether the specified path exists or not
+    isExist = os.path.exists(log_dir)
+    if not isExist:
+        # Create a new directory because it does not exist
+        os.makedirs(log_dir)
+        print("The new directory is created!")
+
     logHandler = handlers.RotatingFileHandler(log_fname, maxBytes=5242880, backupCount=1)
     logHandler.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s - %(message)s')

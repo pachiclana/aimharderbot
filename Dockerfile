@@ -4,8 +4,6 @@ WORKDIR /usr/src/app
 
 COPY src /usr/src/app/src
 
-RUN mkdir -p /usr/src/app/logs
-
 RUN pip install beautifulsoup4==4.11.0
 RUN pip install requests==2.28.0
 RUN pip install pyTelegramBotAPI==4.13.0
