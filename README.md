@@ -6,13 +6,18 @@ Python script to automate your booking sessions in [aimharder.com](http://aimhar
 
 Having docker installed you only need to do the following command:
 
-`docker run -it --rm --name aimharderbot aimharderbot:v1 \  
+```
+docker run -it --rm --name aimharderbot aimharderbot:v1 \
       --email='mail@mail.com' \
       --password='password' \
       --booking-goals='{"1": {"time":"1730", "name":"NAME"},"2": {"time":"1730", "name":"NAME"},"4": {"time":"1730", "name":"NAME"}}' \
       --box-name='boxname' \
       --box-id=1234 \
-      --days-in-advance=7`
+      --days-in-advance=7
+      --notify-on-telegram \
+      --telegram-bot-token='your_telegram_bot_token' \
+      --telegram-chat-id='chat_id'
+```
 
 Explanation about the fields:
 
@@ -40,5 +45,10 @@ Wednesdays at 18:15 class name should contain ARIBAU
 
 `days-in-advance`: this is how many days in advance the script should try to book classes from, so for example, if this script is being run on a Monday and this field is set to 3 it's going to try book Thursday class from `booking_goals`
 
+`notify-on-telegram`: set this parameter if you want the app to notify on a chat group about the bookings and exceptions of the app. If you do not want the notification, you have to delete this parameter from the command.
+
+`telegram-bot-token`: if the previous parameter is set to true, write here your bot token. There are plenty of tutorials out there in case you do not know how to do your bot in Telegram.
+
+`telegram-chat-id`: specify the chat id where you expect the notifications to be sent to.
 
 Enjoy!
