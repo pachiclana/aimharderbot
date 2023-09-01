@@ -21,7 +21,7 @@ docker run -it --rm -v $(pwd)/logs:/usr/src/app/logs \
 ```
 Explanation about the fields:
 
-`-v`: this parameter binds a folder from the host machine to another folder in the container. This is used access the rolling logs.
+`-v`: this parameter binds a folder from the host machine to another folder in the container. It is used to access the rolling logs and being able to debug in case of error.
 
 `email`: self-explanatory
 
