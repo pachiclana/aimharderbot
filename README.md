@@ -7,7 +7,8 @@ Python script to automate your booking sessions in [aimharder.com](http://aimhar
 Having docker installed you only need to do the following command:
 
 ```
-docker run -it --rm --name aimharderbot aimharderbot:v1 \
+docker run -it --rm -v $(pwd)/logs:/usr/src/app/logs \
+      --name aimharderbot aimharderbot:v1 \
       --email='mail@mail.com' \
       --password='password' \
       --booking-goals='{"1": {"time":"1730", "name":"NAME"},"2": {"time":"1730", "name":"NAME"},"4": {"time":"1730", "name":"NAME"}}' \
@@ -18,8 +19,9 @@ docker run -it --rm --name aimharderbot aimharderbot:v1 \
       --telegram-bot-token='your_telegram_bot_token' \
       --telegram-chat-id='chat_id'
 ```
-
 Explanation about the fields:
+
+`-v`: this parameter binds a folder from the host machine to another folder in the container. This is used access the rolling logs.
 
 `email`: self-explanatory
 
