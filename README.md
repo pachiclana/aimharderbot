@@ -27,10 +27,10 @@ Explanation about the fields:
 
 `password`: self-explanatory
 
-`booking_goals`: expects a string formatted in json where the keys are:
-* `day`: the day of the week as integer from 0 to 6 (Monday to Friday)
-* `time`: the time at which the class takes place. It must be formatted like 'HHMM'
-* `name`: the name of the class you are trying to book.
+`booking_goals`: expects a string formatted in json where the keys are:  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`day`: the day of the week as integer from 0 to 6 (Monday to Friday)  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`time`: the time at which the class takes place. It must be formatted like 'HHMM'  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`name`: the name of the class you are trying to book.
 
 Here you have an example:
 
