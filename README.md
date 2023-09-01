@@ -51,7 +51,7 @@ Wednesdays at 18:15 and the class name is WOD2
 
 `days-in-advance`: this is how many days in advance the script should try to book classes from, so for example, if this script is being run on a Monday and this field is set to 3 it's going to try book Thursday class from `booking_goals`
 
-`notify-on-telegram`: set this parameter if you want the app to notify on a chat group about the bookings and exceptions of the app. If you do not want the notification, you have to delete this parameter from the command.
+`notify-on-telegram`: set this parameter if you want the app to notify on a chat group about the bookings and exceptions of the app. If you do not want the notifications, you have to delete this parameter from the run command.
 
 `telegram-bot-token`: if the previous parameter is set to true, write here your bot token. There are plenty of tutorials out there in case you do not know how to do your bot in Telegram.
 
