@@ -6,7 +6,7 @@ Python script to automate your booking sessions in [aimharder.com](http://aimhar
 
 Having docker installed you only need to do the following command:
 
-`docker run -it --rm --name aimharderbot aimharderbot:v1 \
+`docker run -it --rm --name aimharderbot aimharderbot:v1 \  
       --email='mail@mail.com' \
       --password='password' \
       --booking-goals='{"1": {"time":"1730", "name":"NAME"},"2": {"time":"1730", "name":"NAME"},"4": {"time":"1730", "name":"NAME"}}' \
