@@ -27,15 +27,19 @@ Explanation about the fields:
 
 `password`: self-explanatory
 
-`booking_goals`: expects a json where as keys you would use the day of the week as integer from 0 to 6 (Monday to Friday) and the value should be the time (HHMM) of the class and the name of the class or part of it.
-Unfortunately this structure needs to be crazy escaped, but here's an example:
+`booking_goals`: expects a string formatted in json where the keys are:
+      `day`: the day of the week as integer from 0 to 6 (Monday to Friday)
+      `time`: the time at which the class takes place. It must be formatted like 'HHMM'
+      `name`: the name of the class you are trying to book.
 
-Mondays at 18:15 class name should contain ARIBAU
-Wednesdays at 18:15 class name should contain ARIBAU
+Here you have an example:
+
+Mondays at 18:15 and the class name is WOD
+Wednesdays at 18:15 and the class name is WOD2
 ```python
 {
-  "0": {"time":"1815", "name":"ARIBAU"},
-  "2": {"time":"1815", "name":"ARIBAU"}
+  "0": {"time":"1815", "name":"WOD"},
+  "2": {"time":"1815", "name":"WOD2"}
 }
 ```
 
