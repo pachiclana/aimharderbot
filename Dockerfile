@@ -1,4 +1,5 @@
 FROM arm32v7/python
+ENV TZ="Europe/Madrid"
 
 WORKDIR /usr/src/app
 
