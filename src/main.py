@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import telebot
 
 from client import AimHarderClient
-from exceptions import NoBookingGoal, NoTrainingDay
+from exceptions import NoBookingGoal, NoTrainingDay, BoxClosed
 
 def get_booking_goal_time(day: datetime, booking_goals):
     #We take the future day we want to book the class on and check if it exists in the input json parameters
@@ -26,6 +26,10 @@ def get_booking_goal_time(day: datetime, booking_goals):
 
 
 def get_class_to_book(classes: list[dict], target_time: str, class_name: str):
+    if len(classes) == 0:
+        logger.error(f"Box is closed.")
+        raise BoxClosed
+
     if any(target_time in s["timeid"] for s in classes):
         logger.info(f"Class found for time ({target_time})")
         _classes = [s for s in classes if target_time in s["timeid"]]
@@ -80,6 +84,10 @@ def main(email, password, booking_goals, box_name, box_id, days_in_advance, noti
             logger.debug(f"Training booked succesfully!! :) {target_day.strftime('%A')} - {target_day.strftime('%Y-%m-%d')} at {target_time} -  {target_name}")
         else:
             logger.debug(f"Booking of the training unsuccessfull.")
+    except BoxClosed:
+        logger.error("The box is closed!")
+        if notify_on_telegram:
+            bot.send_message(telegram_chat_id, f"\U00002714 The box is closed. Target: {target_day.strftime('%A')} - {target_day.strftime('%d %b %Y')}")
     except NoTrainingDay:
         logger.error("No training day today!")
         if notify_on_telegram:
