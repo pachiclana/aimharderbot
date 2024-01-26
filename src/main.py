@@ -37,24 +37,11 @@ def get_booking_goal_data(hours_in_advance: int, booking_goals: dict) -> tuple[d
             diff_hours = diff.days * 24 + diff.seconds // 3600
             diff_minutes = (diff.seconds % 3600) // 60
             if (diff_hours == hours_in_advance and diff_minutes == 0) or (diff_hours == hours_in_advance-1 and diff_minutes > 0):
-                return (
-                    target_day,
-                    target_time,
-                    value["name"],
-                    True
-                )
-                # print(f"Target: {today.year}-{today.month}-{today.day} {today.hour}:{today.minute}:{today.second}")
-                # print(f"Target: {target_datetime.year}-{target_datetime.month}-{target_datetime.day} {target_datetime.hour}:{target_datetime.minute}:{target_datetime.second}")
-                # print(f"")
+                return (target_day, target_time, value["name"], True)
             else:
-                return (
-                    None,
-                    None,
-                    None,
-                    False
-                )
-                # pass
-
+                return (None, None, None, False)
+    
+    #If there are no appropriate goals is because it is not training day.
     raise NoTrainingDay(target_day)
 
 
@@ -93,12 +80,7 @@ def main(email, password, booking_goals, box_name, box_id, hours_in_advance, not
         else:
             notify_on_telegram = False
 
-        # target_day = datetime.today() + timedelta(hours=hours_in_advance)
-        
-        #We get the class time and name we want to book
-        # target_time, target_name = get_booking_goal_time(target_day, booking_goals)
-
-        #TEST!!
+        #Check if the booking target exists and compare to the hours in advance
         target_day, target_time, target_name, success = get_booking_goal_data(hours_in_advance, booking_goals)
         
         if not success:
