@@ -14,7 +14,7 @@ docker run -it --rm -v $(pwd)/logs:/usr/src/app/logs \
       --booking-goals='{"1": {"time":"1730", "name":"NAME"},"2": {"time":"1730", "name":"NAME"},"4": {"time":"1730", "name":"NAME"}}' \
       --box-name='boxname' \
       --box-id=1234 \
-      --days-in-advance=7
+      --hours-in-advance=48
       --notify-on-telegram \
       --telegram-bot-token='your_telegram_bot_token' \
       --telegram-chat-id='chat_id'
@@ -38,8 +38,8 @@ Mondays at 18:15 and the class name is WOD
 Wednesdays at 18:15 and the class name is WOD2
 ```python
 {
-  "0": {"time":"1815", "name":"WOD"},
-  "2": {"time":"1815", "name":"WOD2"}
+  "0": {"time":"1800", "name":"WOD"},
+  "2": {"time":"1900", "name":"WOD2"}
 }
 ```
 
@@ -49,7 +49,7 @@ Wednesdays at 18:15 and the class name is WOD2
 
 <img src="https://raw.github.com/pablobuenaposada/fitbot/master/inspect.png" data-canonical-src="https://raw.github.com/pablobuenaposada/fitbot/master/inspect.png" height="300" />
 
-`days-in-advance`: this is how many days in advance the script should try to book classes from, so for example, if this script is being run on a Monday and this field is set to 3 it's going to try book Thursday class from `booking_goals`
+`hours-in-advance`: this is how many hours in advance the script should try to book classes from, so for example, if this script is being run on a Monday and this field is set to 48 it's going to try book Wednesday class from `booking_goals`. It will also take into account the booking goal time
 
 `notify-on-telegram`: set this parameter if you want the app to notify on a chat group about the bookings and exceptions of the app. If you do not want the notifications, you have to delete this parameter from the run command.
 
