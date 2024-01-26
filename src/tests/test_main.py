@@ -95,5 +95,5 @@ class TestMain:
                 booking_goals={"0": {"time": "1700", "name": "Provenza"}},
                 box_name="foo",
                 box_id=1,
-                days_in_advance=3,
+                hours_in_advance=3,
             )
