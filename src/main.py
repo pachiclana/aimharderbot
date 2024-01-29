@@ -29,17 +29,21 @@ def get_booking_goal_data(hours_in_advance: int, booking_goals: dict) -> tuple[d
 
     today = datetime.today()
     target_day = today + timedelta(hours=hours_in_advance)
+    logger.info(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
     for key, value in booking_goals.items():
         if str(target_day.weekday()) == key:
             target_time = value["time"]
             target_datetime = datetime(target_day.year, target_day.month, target_day.day, int(target_time[:2]), int(target_time[2:]))
+            logger.info(f"Calculated target datetime: {target_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
             diff = target_datetime - today
             diff_hours = diff.days * 24 + diff.seconds // 3600
+            logger.info(f"Diff in hours between target datetime and now: {diff_hours}")
             diff_minutes = (diff.seconds % 3600) // 60
+            logger.info(f"Diff in minutes between target datetime and now: {diff_minutes}")
             if (diff_hours == hours_in_advance and diff_minutes == 0) or (diff_hours == hours_in_advance-1 and diff_minutes > 0):
                 return (target_day, target_time, value["name"], True)
             else:
-                return (None, None, None, False)
+                return (target_day, None, None, False)
     
     #If there are no appropriate goals is because it is not training day.
     raise NoTrainingDay(target_day)
@@ -84,6 +88,7 @@ def main(email, password, booking_goals, box_name, box_id, hours_in_advance, not
         target_day, target_time, target_name, success = get_booking_goal_data(hours_in_advance, booking_goals)
         
         if not success:
+            logger.info(f"There class is not available yet ({target_time})")
             return
 
         #We log in into AimHarder platform
