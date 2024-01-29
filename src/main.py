@@ -37,7 +37,7 @@ def get_booking_goal_data(hours_in_advance: int, booking_goals: dict) -> tuple[d
             logger.info(f"Calculated target datetime: {target_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
             diff = target_datetime - today
             diff_hours = diff.days * 24 + diff.seconds // 3600
-            logger.info(f"Diff in hours between target datetime and now: {diff_hours}")
+            logger.info(f"Diff in hours between target datetime and now: {diff_hours} (hours-in-advance={hours_in_advance})")
             diff_minutes = (diff.seconds % 3600) // 60
             logger.info(f"Diff in minutes between target datetime and now: {diff_minutes}")
             if (diff_hours == hours_in_advance and diff_minutes == 0) or (diff_hours == hours_in_advance-1 and diff_minutes > 0):
@@ -88,7 +88,7 @@ def main(email, password, booking_goals, box_name, box_id, hours_in_advance, not
         target_day, target_time, target_name, success = get_booking_goal_data(hours_in_advance, booking_goals)
         
         if not success:
-            logger.info(f"There class is not available yet ({target_time})")
+            logger.info(f"The class is not available yet or it is too late. Target date =  {target_day.strftime('%Y-%m-%d')}")
             return
 
         #We log in into AimHarder platform
