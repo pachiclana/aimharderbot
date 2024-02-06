@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import telebot
 
 from client import AimHarderClient
-from exceptions import NoBookingGoal, NoTrainingDay, BoxClosed
+from exceptions import NoBookingGoal, NoTrainingDay, BoxClosed, AlreadyBooked
 
 def get_booking_goal_time(day: datetime, booking_goals):
     #We take the future day we want to book the class on and check if it exists in the input json parameters
@@ -39,38 +39,40 @@ def get_booking_goal_data(hours_in_advance: int, booking_goals: dict) -> tuple[d
             diff_hours = diff.days * 24 + diff.seconds // 3600
             logger.info(f"Diff in hours between target datetime and now: {diff_hours} (hours-in-advance={hours_in_advance})")
             diff_minutes = (diff.seconds % 3600) // 60
-            logger.info(f"Diff in minutes between target datetime and now: {diff_minutes}")
-            if (diff_hours == hours_in_advance and diff_minutes == 0) or (diff_hours == hours_in_advance-1 and diff_minutes > 0):
+            if (diff_hours == hours_in_advance and diff_minutes == 0) or (diff_hours < hours_in_advance):
                 return (target_day, target_time, value["name"], True)
+                # print(f"Target: {today.year}-{today.month}-{today.day} {today.hour}:{today.minute}:{today.second}")
+                # print(f"Target: {target_datetime.year}-{target_datetime.month}-{target_datetime.day} {target_datetime.hour}:{target_datetime.minute}:{target_datetime.second}")
+                # print(f"")
             else:
-                return (target_day, None, None, False)
-    
-    #If there are no appropriate goals is because it is not training day.
+                return (None, None, None, False)
+                # pass
+
     raise NoTrainingDay(target_day)
 
 
-def get_class_to_book(classes: list[dict], target_time: str, class_name: str):
+def get_class_to_book(classes: list[dict], target_time: str, class_name: str) -> dict:
     if len(classes) == 0:
         logger.error(f"Box is closed.")
         raise BoxClosed
 
     if any(target_time in s["timeid"] for s in classes):
         logger.info(f"Class found for time ({target_time})")
-        _classes = [s for s in classes if target_time in s["timeid"]]
+        found_classes = [s for s in classes if target_time in s["timeid"]]
     else:
         logger.error(f"No class found for time ({target_time})")
         raise NoBookingGoal
 
-    if (len(_classes)) > 1:
-        if any(class_name in s["className"] for s in _classes):
+    if (len(found_classes)) > 1:
+        if any(class_name in s["className"] for s in found_classes):
             logger.info(f"Class found for class name ({class_name})")
-            _classes = [s for s in _classes if class_name in s["className"]]
+            found_classes = [s for s in found_classes if class_name in s["className"]]
         else:
             logger.error(f"No class found for class name ({class_name})")
             raise NoBookingGoal
     
-    logger.info(f"Class found: {_classes[0]}")
-    return _classes[0]["id"]
+    logger.info(f"Class found: {found_classes[0]}")
+    return found_classes[0]
 
 def init_telegram_bot(telegram_bot_token):
     logger.info(f"Telegram notifications are enabled.")
@@ -84,7 +86,6 @@ def main(email, password, booking_goals, box_name, box_id, hours_in_advance, not
         else:
             notify_on_telegram = False
 
-        #Check if the booking target exists and compare to the hours in advance
         target_day, target_time, target_name, success = get_booking_goal_data(hours_in_advance, booking_goals)
         
         if not success:
@@ -101,12 +102,12 @@ def main(email, password, booking_goals, box_name, box_id, hours_in_advance, not
         classes = client.get_classes(target_day)
         
         #From all the classes fetched, we select the one we want to book.
-        class_id = get_class_to_book(classes, target_time, target_name)
+        target_class = get_class_to_book(classes, target_time, target_name)
         
         #We book the class and notify to Telegram if required.
-        if client.book_class(target_day, class_id):
+        if client.book_class(target_day, target_class):
             if notify_on_telegram:
-                bot.send_message(telegram_chat_id, f"\U00002705 Booked! :) {target_day.strftime('%b')}-CW{target_day.strftime('%V')} _{target_day.strftime('%A')} - {target_day.strftime('%Y-%m-%d')}_ at {target_time} - {target_name}")
+                bot.send_message(telegram_chat_id, f"\U00002705 Booked! :) {target_day.strftime('%b')}-CW{target_day.strftime('%V')} _{target_day.strftime('%A')} - {target_day.strftime('%Y-%m-%d')}_ at {target_time} - {target_name} [{target_class["ocupation"]} / {target_class["limit"]}]")
             logger.debug(f"Training booked succesfully!! :) {target_day.strftime('%A')} - {target_day.strftime('%Y-%m-%d')} at {target_time} -  {target_name}")
         else:
             logger.debug(f"Booking of the training unsuccessfull. Target day: {target_day.strftime('%Y-%m-%d')}")
@@ -119,6 +120,11 @@ def main(email, password, booking_goals, box_name, box_id, hours_in_advance, not
         if notify_on_telegram:
             target_day = e.args[0]
             bot.send_message(telegram_chat_id, f"\U00002714 No training day. Target: {target_day.strftime('%A')} - {target_day.strftime('%d %b %Y')}")
+    except AlreadyBooked as e:
+        logger.error("The class was already booked!")
+        if notify_on_telegram:
+            target_day = e.args[0]
+            bot.send_message(telegram_chat_id, f"\U00002705 Already Booked! :) {target_day.strftime('%b')}-CW{target_day.strftime('%V')} _{target_day.strftime('%A')} - {target_day.strftime('%Y-%m-%d')}_ at {target_time} - {target_name}")
     except Exception as e:
         if notify_on_telegram:
             bot.send_message(telegram_chat_id, f"\U0000274C Something went wrong. Target: {target_day.strftime('%A')} - {target_day.strftime('%d %b %Y')}")

@@ -23,3 +23,6 @@ class NoTrainingDay(Exception):
 
 class BoxClosed(Exception):
     pass
+
+class AlreadyBooked(Exception):
+    pass

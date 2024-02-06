@@ -13,6 +13,7 @@ from constants import (
 from exceptions import (
     BookingFailed,
     IncorrectCredentials,
+    AlreadyBooked,
     TooManyWrongAttempts,
     MESSAGE_BOOKING_FAILED_UNKNOWN,
     MESSAGE_BOOKING_FAILED_NO_CREDIT,
@@ -61,11 +62,11 @@ class AimHarderClient:
         self.logger.info(f"Retrieved {len(bookings)} classes for day {target_day.strftime('%Y-%m-%d')}")
         return bookings
 
-    def book_class(self, target_day: datetime, class_id: str) -> bool:
+    def book_class(self, target_day: datetime, target_class: str) -> bool:
         response = self.session.post(
             book_endpoint(self.box_name),
             data={
-                "id": class_id,
+                "id": target_class["id"],
                 "day": target_day.strftime("%Y%m%d"),
                 "insist": 0,
                 "familyId": "",
@@ -74,11 +75,11 @@ class AimHarderClient:
         if response.status_code == HTTPStatus.OK:
             response = response.json()
             if "bookState" in response and response["bookState"] == -2:
-                self.logger.error(f"Booking unsuccesful. There is no available credits. Max numbe of booked sessions reached.")
+                self.logger.error(f"Booking unsuccesful. There is no available credits. Max number of booked sessions reached.")
                 raise BookingFailed(MESSAGE_BOOKING_FAILED_NO_CREDIT)
             if "bookState" in response and response["bookState"] == -12:
                 self.logger.error(f"Booking unsuccesful. You cannot book the same session twice.")
-                raise BookingFailed(response['errorMssg'])
+                raise AlreadyBooked(target_day)
             if "errorMssg" not in response and "errorMssgLang" not in response:
                 # booking went fine
                 self.logger.info(f"Booking completed successfully.")
