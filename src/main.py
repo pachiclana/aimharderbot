@@ -125,6 +125,12 @@ def main(email, password, booking_goals, box_name, box_id, hours_in_advance, not
         if notify_on_telegram:
             target_day = e.args[0]
             bot.send_message(telegram_chat_id, f"\U00002705 Already Booked! :) {target_day.strftime('%b')}-CW{target_day.strftime('%V')} _{target_day.strftime('%A')} - {target_day.strftime('%Y-%m-%d')}_ at {target_time} - {target_name}")
+    except NoBookingGoal as e:
+        logger.error("There is no booking goal!")
+        if notify_on_telegram:
+            not_found = e.args[0]
+            bot.send_message(telegram_chat_id, f"\U0000274C {not_found} was not found!: {target_day.strftime('%b')}-CW{target_day.strftime('%V')} _{target_day.strftime('%A')} - {target_day.strftime('%Y-%m-%d')}_ at {target_time} - {target_name}")
+    
     except Exception as e:
         if notify_on_telegram:
             bot.send_message(telegram_chat_id, f"\U0000274C Something went wrong. Target: {target_day.strftime('%A')} - {target_day.strftime('%d %b %Y')}")
