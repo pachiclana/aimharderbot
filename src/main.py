@@ -61,7 +61,7 @@ def get_class_to_book(classes: list[dict], target_time: str, class_name: str) ->
         found_classes = [s for s in classes if target_time in s["timeid"]]
     else:
         logger.error(f"No class found for time ({target_time})")
-        raise NoBookingGoal
+        raise NoBookingGoal(target_time)
 
     if (len(found_classes)) > 1:
         if any(class_name in s["className"] for s in found_classes):
@@ -69,7 +69,7 @@ def get_class_to_book(classes: list[dict], target_time: str, class_name: str) ->
             found_classes = [s for s in found_classes if class_name in s["className"]]
         else:
             logger.error(f"No class found for class name ({class_name})")
-            raise NoBookingGoal
+            raise NoBookingGoal(class_name)
     
     logger.info(f"Class found: {found_classes[0]}")
     return found_classes[0]
