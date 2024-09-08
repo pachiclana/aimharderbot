@@ -7,6 +7,7 @@ import logging.handlers as handlers
 from datetime import datetime, timedelta
 
 import telebot
+import yaml
 
 from client import AimHarderClient
 from exceptions import NoBookingGoal, NoTrainingDay, BoxClosed, AlreadyBooked
@@ -78,8 +79,20 @@ def init_telegram_bot(telegram_bot_token):
     logger.info(f"Telegram notifications are enabled.")
     return telebot.TeleBot(telegram_bot_token, parse_mode='Markdown')
 
-def main(email, password, booking_goals, box_name, box_id, hours_in_advance, notify_on_telegram, telegram_bot_token, telegram_chat_id):
+def main(configuration):
     try:
+        email = configuration["aimharder"]["email"]
+        password = configuration["aimharder"]["password"]
+        box_name = configuration["aimharder"]["box-name"]
+        box_id = configuration["aimharder"]["box-id"]
+        booking_goals = configuration["aimharder"]["booking-goals"]
+        hours_in_advance = configuration["aimharder"]["hours-in-advance"]
+        exceptions = configuration["aimharder"]["exceptions"]
+        notify_on_telegram = True if "telegram" in configuration else False
+        if notify_on_telegram:
+            telegram_bot_token = configuration["telegram"]["telegram-bot-token"]
+            telegram_chat_id = configuration["telegram"]["telegram-chat-id"]
+
         #If the Telegram notifications are enabled, we instantiate the Telegram Bot
         if notify_on_telegram and telegram_bot_token and telegram_chat_id:
             bot = init_telegram_bot(telegram_bot_token)
@@ -107,10 +120,10 @@ def main(email, password, booking_goals, box_name, box_id, hours_in_advance, not
         #We book the class and notify to Telegram if required.
         if client.book_class(target_day, target_class):
             if notify_on_telegram:
-                bot.send_message(telegram_chat_id, f"\U00002705 Booked! :) {target_day.strftime('%b')}-CW{target_day.strftime('%V')} _{target_day.strftime('%A')} - {target_day.strftime('%Y-%m-%d')}_ at {target_time} - {target_name} [{target_class["ocupation"]} / {target_class["limit"]}]")
-            logger.debug(f"Training booked succesfully!! :) {target_day.strftime('%A')} - {target_day.strftime('%Y-%m-%d')} at {target_time} -  {target_name}")
+                bot.send_message(telegram_chat_id, f"\U00002705 Booked! :) {target_day.strftime('%b')}-CW{target_day.strftime('%V')} _{target_day.strftime('%A')} - {target_day.strftime('%Y-%m-%d')}_ at {target_time} - {target_name} [{target_class["occupation"]} / {target_class["limit"]}]")
+            logger.debug(f"Training booked successfully!! :) {target_day.strftime('%A')} - {target_day.strftime('%Y-%m-%d')} at {target_time} -  {target_name}")
         else:
-            logger.debug(f"Booking of the training unsuccessfull. Target day: {target_day.strftime('%Y-%m-%d')}")
+            logger.debug(f"Booking of the training unsuccessful. Target day: {target_day.strftime('%Y-%m-%d')}")
     except BoxClosed:
         logger.error("The box is closed!")
         if notify_on_telegram:
@@ -172,22 +185,28 @@ def init_logger():
     url_logger.addHandler(logHandler)
     return logger
 
+def load_yaml_config():
+    with open('./config/aimharderbot_config.yaml', 'r') as file:
+        loaded_config = yaml.safe_load(file)
+    print(loaded_config)
+    return loaded_config
 
 if __name__ == "__main__":
  
     logger = init_logger()
+    # config = load_yaml_config()
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--email", required=True, type=str)
-    parser.add_argument("--password", required=True, type=str)
-    parser.add_argument("--booking-goals", required=True, type=json.loads)
-    parser.add_argument("--box-name", required=True, type=str)
-    parser.add_argument("--box-id", required=True, type=int)
-    parser.add_argument("--hours-in-advance", required=True, type=int, default=3)
-    parser.add_argument("--notify-on-telegram", required=False, default=False, action='store_true')
-    parser.add_argument("--telegram-bot-token", required=False, type=str, default='')
-    parser.add_argument("--telegram-chat-id", required=False, type=str, default='abc')
-    args = parser.parse_args()
-
-    input = {key: value for key, value in args.__dict__.items() if value != ""}
-    main(**input)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--email", required=True, type=str)
+    # parser.add_argument("--password", required=True, type=str)
+    # parser.add_argument("--booking-goals", required=True, type=json.loads)
+    # parser.add_argument("--box-name", required=True, type=str)
+    # parser.add_argument("--box-id", required=True, type=int)
+    # parser.add_argument("--hours-in-advance", required=True, type=int, default=3)
+    # parser.add_argument("--notify-on-telegram", required=False, default=False, action='store_true')
+    # parser.add_argument("--telegram-bot-token", required=False, type=str, default='')
+    # parser.add_argument("--telegram-chat-id", required=False, type=str, default='abc')
+    # args = parser.parse_args()
+    # input = {key: value for key, value in args.__dict__.items() if value != ""}
+    
+    main(load_yaml_config())
