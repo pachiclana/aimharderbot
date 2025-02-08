@@ -65,8 +65,8 @@ def get_booking_goal_data_yaml(booking_goals: dict) -> tuple[datetime, str, str,
     # today = datetime(2025,1,26,9,0,0,1)
     # today = datetime(2025,1,26,9,0,1,0)
 
-    # today = datetime.today()
-    today = datetime(2025,2,9,9,33,0,0)
+    today = datetime.today()
+    # today = datetime(2025,2,9,9,33,0,0)
 
 
     #We iterate over the booking goals to find the one that matches the target day
