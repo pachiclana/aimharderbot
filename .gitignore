@@ -5,3 +5,4 @@ book-sessions*.sh
 .vscode/
 /logs
 /.venv
+config/aimharderbot_config.yaml
