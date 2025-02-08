@@ -1,4 +1,4 @@
-git checkout feature/load-config-from-yaml-file
+git checkout develop
 git pull
 docker rm aimharderbot_test:v1
 docker rmi aimharderbot_test:v1
