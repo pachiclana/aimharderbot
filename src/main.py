@@ -8,7 +8,7 @@ import telebot
 import yaml
 
 from client import AimHarderClient
-from exceptions import NoBookingGoal, NoTrainingDay, BoxClosed, AlreadyBooked
+from exceptions import NoBookingGoal, NoTrainingDay, BoxClosed, AlreadyBooked, TooEarly
 
 def get_booking_goal_time(day: datetime, booking_goals):
     #We take the future day we want to book the class on and check if it exists in the input json parameters
@@ -194,6 +194,11 @@ def main(user, configuration):
         if notify_on_telegram:
             class_day = e.args[0]
             bot.send_message(telegram_chat_id, f"\U00002714 No training day. Target: {class_day.strftime('%A')} - {class_day.strftime('%d %b %Y')}")
+    except TooEarly as e:
+        logger.error("Too early to book the class!")
+        if notify_on_telegram:
+            class_day = e.args[0]
+            bot.send_message(telegram_chat_id, f"\U0000274C Too early to book the class. Target: {class_day.strftime('%A')} - {class_day.strftime('%d %b %Y')}")
     except AlreadyBooked as e:
         logger.error("The class was already booked!")
         if notify_on_telegram:

@@ -15,6 +15,7 @@ from exceptions import (
     IncorrectCredentials,
     AlreadyBooked,
     TooManyWrongAttempts,
+    TooEarly,
     MESSAGE_BOOKING_FAILED_UNKNOWN,
     MESSAGE_BOOKING_FAILED_NO_CREDIT,
 )
@@ -78,8 +79,13 @@ class AimHarderClient:
                 self.logger.error(f"Booking unsuccessful. There is no available credits. Max number of booked sessions reached.")
                 raise BookingFailed(MESSAGE_BOOKING_FAILED_NO_CREDIT)
             if "bookState" in response and response["bookState"] == -12:
-                self.logger.error(f"Booking unsuccessful. You cannot book the same session twice.")
-                raise AlreadyBooked(target_day)
+                #errorMssgLang='ERROR_ANTELACION_CLIENTE_HORAS' => "You cannot book a class with less than X hours in advance. Too early."
+                if response["errorMssgLang"] == "ERROR_ANTELACION_CLIENTE_HORAS":
+                    self.logger.error(f"Booking unsuccessful. Too early to book this class.")
+                    raise TooEarly(target_day)
+                else:
+                    self.logger.error(f"Booking unsuccessful. You cannot book the same session twice.")
+                    raise AlreadyBooked(target_day)
             if "errorMssg" not in response and "errorMssgLang" not in response:
                 # booking went fine
                 self.logger.info(f"Booking completed successfully.")
