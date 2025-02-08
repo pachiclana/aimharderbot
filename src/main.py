@@ -52,7 +52,7 @@ def get_booking_goal_data(hours_in_advance: int, booking_goals: dict) -> tuple[d
 
     raise NoTrainingDay(target_day)
 
-def get_booking_goal_data_yaml(hours_in_advance: int, booking_goals: dict) -> tuple[datetime, str, str, bool]:
+def get_booking_goal_data_yaml(booking_goals: dict) -> tuple[datetime, str, str, bool]:
 
     #Assuming that my class time is at 10.00am and the hours in advance is 49 hours. Given different examples, the results are the following ones:
     # today = datetime(2025,1,26,8,59,59,999999) => class datetime is 2025-01-28 10:00:00, diff_hours = 49, diff_minutes = 0,  diff_seconds = 3600,  diff_microseconds = 1.         Success = False
@@ -64,18 +64,22 @@ def get_booking_goal_data_yaml(hours_in_advance: int, booking_goals: dict) -> tu
     # today = datetime(2025,1,26,9,0,0,0)
     # today = datetime(2025,1,26,9,0,0,1)
     # today = datetime(2025,1,26,9,0,1,0)
-    
-    today = datetime.today()
-    target_day = today + timedelta(hours=hours_in_advance)
 
-    logger.info(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
-    
+    # today = datetime.today()
+    today = datetime(2025,2,9,9,33,0,0)
+
+
     #We iterate over the booking goals to find the one that matches the target day
     for goal in booking_goals:
         user_goal_day_str = goal.split(',')[0]
         user_goal_time_str = goal.split(',')[1]
         user_goal_class_name_str = goal.split(',')[2]
+        hours_in_advance = int(goal.split(',')[3])
+
+        target_day = today + timedelta(hours=hours_in_advance)
+
+        logger.info(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
 
         #We check if today+hours_in_advance is the same day as the user goal day
         if str(target_day.strftime("%A")).lower() == user_goal_day_str.lower():
@@ -136,7 +140,7 @@ def main(user, configuration):
         box_name = configuration["box-name"]
         box_id = configuration["box-id"]
         booking_goals = configuration["booking-goals"]
-        hours_in_advance = configuration["hours-in-advance"]
+        # hours_in_advance = configuration["hours-in-advance"]
         exceptions = configuration["exceptions"]
         notify_on_telegram = True if "telegram" in configuration else False
         if notify_on_telegram:
@@ -150,7 +154,7 @@ def main(user, configuration):
             notify_on_telegram = False
 
         # target_day, target_time, target_name, success = get_booking_goal_data(hours_in_advance, booking_goals)
-        class_day, class_time, class_name, success = get_booking_goal_data_yaml(hours_in_advance, booking_goals)
+        class_day, class_time, class_name, success = get_booking_goal_data_yaml(booking_goals)
         
         if not success:
             logger.info(f"The class is not available yet or it is too late. Target date = {class_day.strftime('%Y-%m-%d')}")
@@ -174,9 +178,9 @@ def main(user, configuration):
         #From all the classes fetched, we select the one we want to book.
         target_class = get_class_to_book(classes, class_time, class_name)
         
-        #bookState = 0 => book is already booked, bookState = 1 => book is booked but you are in the waiting list
-        if target_class["bookState"] == 0 or target_class["bookState"] == 1:
-            raise AlreadyBooked(class_day)
+        #bookState = 0 => class is already booked, bookState = 1 => class is booked but you are in the waiting list
+        # if target_class["bookState"] == 0 or target_class["bookState"] == 1:
+        #     raise AlreadyBooked(class_day)
 
         #We book the class and notify to Telegram if required.
         if client.book_class(class_day, target_class):

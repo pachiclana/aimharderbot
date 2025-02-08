@@ -80,10 +80,12 @@ class AimHarderClient:
                 raise BookingFailed(MESSAGE_BOOKING_FAILED_NO_CREDIT)
             if "bookState" in response and response["bookState"] == -12:
                 #errorMssgLang='ERROR_ANTELACION_CLIENTE_HORAS' => "You cannot book a class with less than X hours in advance. Too early."
+                #errorMssgLang='NOPUEDESRESERVAMISMAHORA' => "You cannot book the same session twice."
+                
                 if response["errorMssgLang"] == "ERROR_ANTELACION_CLIENTE_HORAS":
                     self.logger.error(f"Booking unsuccessful. Too early to book this class.")
                     raise TooEarly(target_day)
-                else:
+                elif response["errorMssgLang"] == "NOPUEDESRESERVAMISMAHORA":
                     self.logger.error(f"Booking unsuccessful. You cannot book the same session twice.")
                     raise AlreadyBooked(target_day)
             if "errorMssg" not in response and "errorMssgLang" not in response:
