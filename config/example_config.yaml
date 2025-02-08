@@ -1,0 +1,29 @@
+-  user1:
+    box-name: boxname1
+    box-id: 9999999
+    email: myemail.1@mail.com
+    password: ThisIsMyPassword1
+    booking-goals: 
+      - monday,1400,WOD
+      - wednesday,0930,OPEN
+      - friday,1030,WOD
+    hours-in-advance: 48
+    exceptions:
+    telegram:
+      telegram-bot-token: telegram-token-1
+      telegram-chat-id: 'chat-id-string-1'
+-  user2:
+    box-name: boxname2
+    box-id: 8888888
+    email: myemail.2@mail.com
+    password: ThisIsMyPassword2
+    booking-goals: 
+      - monday,0730,WOD
+      - thursday,1730,OPEN
+    hours-in-advance: 72
+    exceptions:
+    telegram:
+      telegram-bot-token: telegram-token-2
+      telegram-chat-id: 'chat-id-string-2'
+
+  

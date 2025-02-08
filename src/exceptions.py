@@ -26,3 +26,6 @@ class BoxClosed(Exception):
 
 class AlreadyBooked(Exception):
     pass
+
+class TooEarly(Exception):
+    pass
