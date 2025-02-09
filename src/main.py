@@ -10,21 +10,46 @@ import yaml
 from client import AimHarderClient
 from exceptions import NoBookingGoal, NoTrainingDay, BoxClosed, AlreadyBooked, TooEarly
 
-def get_booking_goal_time(day: datetime, booking_goals):
-    #We take the future day we want to book the class on and check if it exists in the input json parameters
-    try:
-        time_goal = booking_goals[str(day.weekday())]["time"]
-        name_goal = booking_goals[str(day.weekday())]["name"]
-        logger.info(f"Found date ({day.strftime('%Y-%m-%d')}), time ({time_goal}) and name class ({name_goal}) to book.")
-        return (
-            time_goal,
-            name_goal,
-        )
-    except KeyError:  # did not found a matching booking goal
-        logger.error(f"Either the time or the name could not be found in the input parameters. There is no class to book on {day.strftime('%Y-%m-%d')}")
-        raise NoTrainingDay
-    
-def get_booking_goal_data(booking_goals: dict) -> tuple[datetime, str, str, bool]:
+def init_logger():
+
+    logger = logging.getLogger('aimharder-bot')
+    logger.setLevel(logging.DEBUG)
+    req_logger = logging.getLogger("requests")
+    req_logger.setLevel(logging.DEBUG)
+    url_logger = logging.getLogger("urllib3")
+    url_logger.setLevel(logging.DEBUG)
+
+    #20Mb = 20971520 bytes
+    #15Mb = 15728640 bytes
+    #5Mb = 5242880 bytes
+
+    #We set the logs folder directory to be on the same folder of the execution file
+    log_dir = os.path.join(os.path.normpath(os.getcwd() + os.sep), 'logs')
+    log_fname = os.path.join(log_dir, 'aimharder-bot.log')
+
+    #Create folder if it does not exist
+    create_folder_if_not_exists(log_dir)
+
+    logHandler = handlers.RotatingFileHandler(log_fname, maxBytes=5242880, backupCount=1)
+    logHandler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s - %(message)s')
+    logHandler.setFormatter(formatter)
+
+    logger.addHandler(logHandler)
+    req_logger.addHandler(logHandler)
+    url_logger.addHandler(logHandler)
+    return logger
+
+def load_yaml_config():
+    with open('config/aimharderbot_config.yaml', 'r') as file:
+        loaded_config = yaml.safe_load(file)
+    return loaded_config
+
+def create_folder_if_not_exists(folder):
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+
+def get_booking_goal(booking_goals: dict) -> tuple[datetime, str, str, bool]:
 
     #Assuming that my class time is at 10.00am and the hours in advance is 49 hours. Given different examples, the results are the following ones:
     # today = datetime(2025,1,26,8,59,59,999999) => class datetime is 2025-01-28 10:00:00, diff_hours = 49, diff_minutes = 0,  diff_seconds = 3600,  diff_microseconds = 1.         Success = False
@@ -32,14 +57,7 @@ def get_booking_goal_data(booking_goals: dict) -> tuple[datetime, str, str, bool
     # today = datetime(2025,1,26,9,0,0,000001)   => class datetime is 2025-01-28 10:00:00, diff_hours = 48, diff_minutes = 59,  diff_seconds = 3599, diff_microseconds = 999999.    Success = True
     # today = datetime(2025,1,26,9,0,1,000000)   => class datetime is 2025-01-28 10:00:00, diff_hours = 48, diff_minutes = 59, diff_seconds = 3599,  diff_microseconds = 0.         Success = True
     
-    # today = datetime(2025,1,26,8,59,59,999999)
-    # today = datetime(2025,1,26,9,0,0,0)
-    # today = datetime(2025,1,26,9,0,0,1)
-    # today = datetime(2025,1,26,9,0,1,0)
-
     today = datetime.today()
-    # today = datetime(2025,2,9,9,33,0,0)
-
 
     #We iterate over the booking goals to find the one that matches the target day
     for goal in booking_goals:
@@ -75,7 +93,6 @@ def get_booking_goal_data(booking_goals: dict) -> tuple[datetime, str, str, bool
                 return (target_day, user_goal_time_str, user_goal_class_name_str, False)
 
     raise NoTrainingDay(target_day)
-
 
 def get_class_to_book(classes: list[dict], target_time: str, class_name: str) -> dict:
     if len(classes) == 0:
@@ -135,7 +152,7 @@ def main(user, configuration):
         else:
             notify_on_telegram = False
 
-        class_day, class_time, class_name, success = get_booking_goal_data(booking_goals)
+        class_day, class_time, class_name, success = get_booking_goal(booking_goals)
         
         if not success:
             logger.info(f"{user} - The class is not available yet or it is too late. Target date = {class_day.strftime('%Y-%m-%d')}. Class at: {class_time}")
@@ -195,44 +212,6 @@ def main(user, configuration):
         print(traceback.format_exc())
 
 #We set up the loggers
-def init_logger():
-
-    logger = logging.getLogger('aimharder-bot')
-    logger.setLevel(logging.DEBUG)
-    req_logger = logging.getLogger("requests")
-    req_logger.setLevel(logging.DEBUG)
-    url_logger = logging.getLogger("urllib3")
-    url_logger.setLevel(logging.DEBUG)
-
-    #20Mb = 20971520 bytes
-    #15Mb = 15728640 bytes
-    #5Mb = 5242880 bytes
-
-    #We set the logs folder directory to be on the same folder of the execution file
-    log_dir = os.path.join(os.path.normpath(os.getcwd() + os.sep), 'logs')
-    log_fname = os.path.join(log_dir, 'aimharder-bot.log')
-
-    #Create folder if it does not exist
-    create_folder_if_not_exists(log_dir)
-
-    logHandler = handlers.RotatingFileHandler(log_fname, maxBytes=5242880, backupCount=1)
-    logHandler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s - %(message)s')
-    logHandler.setFormatter(formatter)
-
-    logger.addHandler(logHandler)
-    req_logger.addHandler(logHandler)
-    url_logger.addHandler(logHandler)
-    return logger
-
-def load_yaml_config():
-    with open('config/aimharderbot_config.yaml', 'r') as file:
-        loaded_config = yaml.safe_load(file)
-    return loaded_config
-
-def create_folder_if_not_exists(folder):
-    if not os.path.exists(folder):
-        os.makedirs(folder)
 
 if __name__ == "__main__":
 
