@@ -97,32 +97,32 @@ def get_booking_goal(booking_goals: dict) -> tuple[datetime, str, str, bool]:
 
 def get_class_to_book(classes: list[dict], target_time: str, class_name: str) -> dict:
     if len(classes) == 0:
-        logger.error(f"Box is closed.")
+        logger.error(f"{user_name} - Box is closed.")
         raise BoxClosed
 
     if any(target_time in s["timeid"] for s in classes):
-        logger.info(f"Class found for time ({target_time})")
+        logger.info(f"{user_name} - Class found for time ({target_time})")
         if "OPEN" in class_name:
             found_classes = [s for s in classes if target_time in s["timeid"]]
         else:
             found_classes = [s for s in classes if target_time in s["timeid"] and 'OPEN' not in s['className']]
     else:
-        logger.error(f"No class found for time ({target_time})")
+        logger.error(f"{user_name} - No class found for time ({target_time})")
         raise NoBookingGoal(target_time)
 
     if (len(found_classes)) > 1:
         if any(class_name in s["className"] for s in found_classes):
-            logger.info(f"Class found for class name ({class_name})")
+            logger.info(f"{user_name} - Class found for class name ({class_name})")
             found_classes = [s for s in found_classes if class_name in s["className"]]
         else:
-            logger.error(f"No class found for class name ({class_name})")
+            logger.error(f"{user_name} - No class found for class name ({class_name})")
             raise NoBookingGoal(class_name)
 
-    logger.info(f"Class found: {found_classes[0]}")
+    logger.info(f"{user_name} - Class found: {found_classes[0]}")
     return found_classes[0]
 
 def init_telegram_bot(telegram_bot_token):
-    logger.info(f"Telegram notifications are enabled.")
+    logger.info(f"{user_name} - Telegram notifications are enabled.")
     return telebot.TeleBot(telegram_bot_token, parse_mode='Markdown')
 
 def parse_config_params(config):
@@ -139,7 +139,7 @@ def parse_config_params(config):
             telegram_chat_id = config["telegram"]["telegram-chat-id"]
         return email, password, box_name, box_id, booking_goals, exceptions, notify_on_telegram, telegram_bot_token, telegram_chat_id
     except Exception as e:
-        logger.error(f"Error parsing configuration parameters: {e}")
+        logger.error(f"{user_name} - Error parsing configuration parameters: {e}")
         raise e
 
 def main(user, configuration):
@@ -156,12 +156,12 @@ def main(user, configuration):
         class_day, class_time, class_name, success = get_booking_goal(booking_goals)
 
         if not success:
-            logger.info(f"{user} - The class is not available yet or it is too late. Target date = {class_day.strftime('%Y-%m-%d')}. Class at: {class_time}")
+            logger.info(f"{user_name} - The class is not available yet or it is too late. Target date = {class_day.strftime('%Y-%m-%d')}. Class at: {class_time}")
             return
 
         #We log in into AimHarder platform
         client = AimHarderClient(email=email, password=password, box_id=box_id, box_name=box_name)
-        logger.debug(f"{user} - Client connected to AimHarder.")
+        logger.debug(f"{user_name} - Client connected to AimHarder.")
 
         #We fetch the classes that are scheduled for the target day
         classes = client.get_classes(class_day)
@@ -171,37 +171,37 @@ def main(user, configuration):
 
         # bookState = 0 => class is already booked, bookState = 1 => class is booked but you are in the waiting list
         if target_class["bookState"] == 0 or target_class["bookState"] == 1:
-            logger.error(f"{user} - The class cannot be booked because it is already booked!")
+            logger.error(f"{user_name} - The class cannot be booked because it is already booked!")
             raise AlreadyBooked(class_day)
 
         #We book the class and notify to Telegram if required.
         if client.book_class(class_day, target_class):
             if notify_on_telegram:
                 bot.send_message(telegram_chat_id, f"\U00002705 {class_name}! _{class_day.strftime('%A')}_ {class_day.strftime('%d.%m.%Y')} at {class_time[:2]}:{class_time[2:]} - [{target_class["ocupation"]}/{target_class["limit"]}] ({target_class["id"]})")
-            logger.debug(f"{user} - Training booked successfully!! {class_day.strftime('%A')} - {class_day.strftime('%Y-%m-%d')} at {class_time} -  {class_name}")
+            logger.debug(f"{user_name} - Training booked successfully!! {class_day.strftime('%A')} - {class_day.strftime('%Y-%m-%d')} at {class_time} -  {class_name}")
         else:
-            logger.debug(f"{user} - Booking of the training unsuccessful. Target day: {class_day.strftime('%Y-%m-%d')}")
+            logger.debug(f"{user_name} - Booking of the training unsuccessful. Target day: {class_day.strftime('%Y-%m-%d')}")
     except BoxClosed:
-        logger.error("The box is closed!")
+        logger.error("{user_name} - The box is closed!")
         # if notify_on_telegram:
             # bot.send_message(telegram_chat_id, f"\U00002714 The box is closed. Target: {class_day.strftime('%A')} - {class_day.strftime('%d %b %Y')}")
     except NoTrainingDay as e:
-        logger.error("No training day today!")
+        logger.error("{user_name} - No training day today!")
         # if notify_on_telegram:
         #     class_day = e.args[0]
             # bot.send_message(telegram_chat_id, f"\U00002714 No training day. Target: {class_day.strftime('%A')} - {class_day.strftime('%d %b %Y')}")
     except TooEarly as e:
-        logger.error("Too early to book the class!")
+        logger.error("{user_name} - Too early to book the class!")
         # if notify_on_telegram:
         #     class_day = e.args[0]
             # bot.send_message(telegram_chat_id, f"\U0000274C Too early to book the class. Target: {class_day.strftime('%A')} - {class_day.strftime('%d %b %Y')}")
     except AlreadyBooked as e:
-        logger.error("The class was already booked!")
+        logger.error("{user_name} - The class was already booked!")
         # if notify_on_telegram:
         #     class_day = e.args[0]
             # bot.send_message(telegram_chat_id, f"\U00002705 Already Booked! :) {class_day.strftime('%b')}-CW{class_day.strftime('%V')} _{class_day.strftime('%A')} - {class_day.strftime('%Y-%m-%d')}_ at {class_time} - {class_name}")
     except NoBookingGoal as e:
-        logger.error("There is no booking goal!")
+        logger.error("{user_name} - There is no booking goal!")
         # if notify_on_telegram:
         #     not_found = e.args[0]
             # bot.send_message(telegram_chat_id, f"\U0000274C {not_found} was not found!: {class_day.strftime('%b')}-CW{class_day.strftime('%V')} _{class_day.strftime('%A')} - {class_day.strftime('%Y-%m-%d')}_ at {class_time} - {class_name}")
@@ -209,7 +209,7 @@ def main(user, configuration):
         if notify_on_telegram:
             bot.send_message(telegram_chat_id, f"\U0000274C Something went wrong. Target: {class_day.strftime('%A')} - {class_day.strftime('%d %b %Y')}")
             bot.send_message(telegram_chat_id, traceback.format_exc(), parse_mode='None')
-        logger.error(traceback.format_exc())
+        logger.error(f"{user_name} - {traceback.format_exc()}")
         print(traceback.format_exc())
 
 #We set up the loggers
@@ -224,9 +224,9 @@ if __name__ == "__main__":
     logger = init_logger()
 
     for config in load_yaml_config(config_file):
-        for key, value in config.items():
+        for user_name, user_config in config.items():
             try:
-                main(key, value)
+                main(user_name, user_config)
             except Exception as e:
                 print(e)
 
