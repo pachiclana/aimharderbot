@@ -41,8 +41,8 @@ def init_logger():
     url_logger.addHandler(logHandler)
     return logger
 
-def load_yaml_config(full_filename: str):
-    with open(full_filename, 'r') as file:
+def load_yaml_config(filename: str):
+    with open(os.path.join('./config', filename), 'r') as file:
         loaded_config = yaml.safe_load(file)
     return loaded_config
 
@@ -217,10 +217,10 @@ def main(user, configuration):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config-full-filename", required=True, type=str)
+    parser.add_argument("--config-filename", required=True, type=str)
     args = parser.parse_args()
 
-    config_file = os.path.normpath(args.config_full_filename)
+    config_file = os.path.normpath(args.config_filename)
     logger = init_logger()
 
     for config in load_yaml_config(config_file):
