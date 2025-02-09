@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from requests import Session
 import logging
 from constants import LOGIN_ENDPOINT, book_endpoint,classes_endpoint, ERROR_TAG_ID
-from exceptions import BookingFailed, IncorrectCredentials, AlreadyBooked, TooManyWrongAttempts, TooEarly, MESSAGE_BOOKING_FAILED_UNKNOWN, MESSAGE_BOOKING_FAILED_NO_CREDIT
+from exceptions import BookingFailed, IncorrectCredentials, AlreadyBooked, TooManyWrongAttempts, TooEarly, MESSAGE_BOOKING_FAILED_UNKNOWN, MESSAGE_BOOKING_FAILED_NO_CREDIT, MESSAGE_BOOKING_FAILED_MAX_WAIT_CAPACITY
 
 
 class AimHarderClient:
@@ -61,24 +61,27 @@ class AimHarderClient:
         )
         if response.status_code == HTTPStatus.OK:
             response = response.json()
+            if "bookState" in response and response["bookState"] == -1:
+                self.logger.error(f"Booking unsuccessful. Max capacity of the waiting list overpassed.")
+                raise BookingFailed(MESSAGE_BOOKING_FAILED_MAX_WAIT_CAPACITY)
+            
             if "bookState" in response and response["bookState"] == -2:
                 self.logger.error(f"Booking unsuccessful. There is no available credits. Max number of booked sessions reached.")
                 raise BookingFailed(MESSAGE_BOOKING_FAILED_NO_CREDIT)
-            if "bookState" in response and response["bookState"] == -12:
-                
-                #errorMssgLang='ERROR_ANTELACION_CLIENTE_HORAS' => "You cannot book a class with less than X hours in advance. Too early."
-                #errorMssgLang='NOPUEDESRESERVAMISMAHORA' => "You cannot book the same session twice."
-                
+            
+            if "bookState" in response and response["bookState"] == -12:               
                 if response["errorMssgLang"] == "ERROR_ANTELACION_CLIENTE_HORAS":
                     self.logger.error(f"Booking unsuccessful. Too early to book this class.")
                     raise TooEarly(target_day)
                 elif response["errorMssgLang"] == "NOPUEDESRESERVAMISMAHORA":
                     self.logger.error(f"Booking unsuccessful. You cannot book the same session twice.")
                     raise AlreadyBooked(target_day)
+                
             if "errorMssg" not in response and "errorMssgLang" not in response:
                 # booking successful
                 self.logger.info(f"Booking completed successfully.")
                 return True
+            
         self.logger.error(f"UNKNOWN ERROR!!!!!.")
         raise BookingFailed(MESSAGE_BOOKING_FAILED_UNKNOWN)
     

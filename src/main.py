@@ -59,6 +59,7 @@ def get_booking_goal(booking_goals: dict) -> tuple[datetime, str, str, bool]:
     # today = datetime(2025,1,26,9,0,1,000000)   => class datetime is 2025-01-28 10:00:00, diff_hours = 48, diff_minutes = 59, diff_seconds = 3599,  diff_microseconds = 0.         Success = True
 
     today = datetime.today()
+    # today = datetime(2025,2,8,20,2,0,000000) 
 
     #We iterate over the booking goals to find the one that matches the target day
     for goal in booking_goals:
