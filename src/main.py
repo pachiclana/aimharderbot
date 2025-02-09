@@ -70,7 +70,7 @@ def get_booking_goal(booking_goals: dict) -> tuple[datetime, str, str, bool]:
         target_day = today + timedelta(hours=hours_in_advance)
 
         logger.info(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
+        # print(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
 
         #We check if today+hours_in_advance is the same day as the user goal day
         if str(target_day.strftime("%A")).lower() == user_goal_day_str.lower():
@@ -78,13 +78,13 @@ def get_booking_goal(booking_goals: dict) -> tuple[datetime, str, str, bool]:
             #We calculate the datetime where we want to book the class
             class_datetime = datetime(target_day.year, target_day.month, target_day.day, int(user_goal_time_str[:2]), int(user_goal_time_str[2:]))
             logger.info(f"Calculated class to book datetime: {class_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"Calculated class to book datetime: {class_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
+            # print(f"Calculated class to book datetime: {class_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
 
             #We calculate the difference in hours between the datetime of the class and now
             diff = class_datetime - today
             diff_hours = diff.days * 24 + diff.seconds // 3600
             logger.info(f"Diff in hours between class datetime and now: {diff_hours} (hours-in-advance={hours_in_advance})")
-            print(f"Diff in hours between class datetime and now: {diff_hours} (hours-in-advance={hours_in_advance})")
+            # print(f"Diff in hours between class datetime and now: {diff_hours} (hours-in-advance={hours_in_advance})")
 
             #There are 2 conditions, one when it is exactly time o'clock (09:00:00:000000) and another one when the time is
             # over o'clock (09:00:00:000001). With this condition we skip the case when the time is immediately before o'clock (08:59:59:999999)
