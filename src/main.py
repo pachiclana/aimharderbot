@@ -1,3 +1,4 @@
+import argparse
 import os
 import traceback
 import logging
@@ -40,8 +41,8 @@ def init_logger():
     url_logger.addHandler(logHandler)
     return logger
 
-def load_yaml_config():
-    with open('config/aimharderbot_config.yaml', 'r') as file:
+def load_yaml_config(full_filename: str):
+    with open(full_filename, 'r') as file:
         loaded_config = yaml.safe_load(file)
     return loaded_config
 
@@ -56,7 +57,7 @@ def get_booking_goal(booking_goals: dict) -> tuple[datetime, str, str, bool]:
     # today = datetime(2025,1,26,9,0,0,000000)   => class datetime is 2025-01-28 10:00:00, diff_hours = 49, diff_minutes = 0,  diff_seconds = 3600,  diff_microseconds = 0.         Success = True
     # today = datetime(2025,1,26,9,0,0,000001)   => class datetime is 2025-01-28 10:00:00, diff_hours = 48, diff_minutes = 59,  diff_seconds = 3599, diff_microseconds = 999999.    Success = True
     # today = datetime(2025,1,26,9,0,1,000000)   => class datetime is 2025-01-28 10:00:00, diff_hours = 48, diff_minutes = 59, diff_seconds = 3599,  diff_microseconds = 0.         Success = True
-    
+
     today = datetime.today()
 
     #We iterate over the booking goals to find the one that matches the target day
@@ -78,14 +79,14 @@ def get_booking_goal(booking_goals: dict) -> tuple[datetime, str, str, bool]:
             class_datetime = datetime(target_day.year, target_day.month, target_day.day, int(user_goal_time_str[:2]), int(user_goal_time_str[2:]))
             logger.info(f"Calculated class to book datetime: {class_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
             print(f"Calculated class to book datetime: {class_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-            
+
             #We calculate the difference in hours between the datetime of the class and now
             diff = class_datetime - today
             diff_hours = diff.days * 24 + diff.seconds // 3600
             logger.info(f"Diff in hours between class datetime and now: {diff_hours} (hours-in-advance={hours_in_advance})")
             print(f"Diff in hours between class datetime and now: {diff_hours} (hours-in-advance={hours_in_advance})")
 
-            #There are 2 conditions, one when it is exactly time o'clock (09:00:00:000000) and another one when the time is 
+            #There are 2 conditions, one when it is exactly time o'clock (09:00:00:000000) and another one when the time is
             # over o'clock (09:00:00:000001). With this condition we skip the case when the time is immediately before o'clock (08:59:59:999999)
             if (diff_hours == hours_in_advance and diff.microseconds == 0) or (diff_hours < hours_in_advance):
                 return (target_day, user_goal_time_str, user_goal_class_name_str, True)
@@ -116,7 +117,7 @@ def get_class_to_book(classes: list[dict], target_time: str, class_name: str) ->
         else:
             logger.error(f"No class found for class name ({class_name})")
             raise NoBookingGoal(class_name)
-    
+
     logger.info(f"Class found: {found_classes[0]}")
     return found_classes[0]
 
@@ -153,7 +154,7 @@ def main(user, configuration):
             notify_on_telegram = False
 
         class_day, class_time, class_name, success = get_booking_goal(booking_goals)
-        
+
         if not success:
             logger.info(f"{user} - The class is not available yet or it is too late. Target date = {class_day.strftime('%Y-%m-%d')}. Class at: {class_time}")
             return
@@ -164,10 +165,10 @@ def main(user, configuration):
 
         #We fetch the classes that are scheduled for the target day
         classes = client.get_classes(class_day)
-       
+
         #From all the classes fetched, we select the one we want to book.
         target_class = get_class_to_book(classes, class_time, class_name)
-        
+
         # bookState = 0 => class is already booked, bookState = 1 => class is booked but you are in the waiting list
         if target_class["bookState"] == 0 or target_class["bookState"] == 1:
             logger.error(f"{user} - The class cannot be booked because it is already booked!")
@@ -215,14 +216,17 @@ def main(user, configuration):
 
 if __name__ == "__main__":
 
-    config_dir = os.path.join(os.path.normpath(os.getcwd() + os.sep), 'config')
-    create_folder_if_not_exists(config_dir)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config-full-filename", required=True, type=str)
+    args = parser.parse_args()
+
+    config_file = os.path.normpath(args.config_full_filename)
     logger = init_logger()
 
-    for config in load_yaml_config():
+    for config in load_yaml_config(config_file):
         for key, value in config.items():
             try:
                 main(key, value)
             except Exception as e:
                 print(e)
-        
+
