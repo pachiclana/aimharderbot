@@ -6,3 +6,5 @@ book-sessions*.sh
 /logs
 /.venv
 config/aimharderbot_config.yaml
+docs/api_docs.md
+resources/example*

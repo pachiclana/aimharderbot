@@ -3,22 +3,8 @@ from http import HTTPStatus
 from bs4 import BeautifulSoup
 from requests import Session
 import logging
-
-from constants import (
-    LOGIN_ENDPOINT,
-    book_endpoint,
-    classes_endpoint,
-    ERROR_TAG_ID,
-)
-from exceptions import (
-    BookingFailed,
-    IncorrectCredentials,
-    AlreadyBooked,
-    TooManyWrongAttempts,
-    TooEarly,
-    MESSAGE_BOOKING_FAILED_UNKNOWN,
-    MESSAGE_BOOKING_FAILED_NO_CREDIT,
-)
+from constants import LOGIN_ENDPOINT, book_endpoint,classes_endpoint, ERROR_TAG_ID
+from exceptions import BookingFailed, IncorrectCredentials, AlreadyBooked, TooManyWrongAttempts, TooEarly, MESSAGE_BOOKING_FAILED_UNKNOWN, MESSAGE_BOOKING_FAILED_NO_CREDIT
 
 
 class AimHarderClient:
@@ -79,6 +65,7 @@ class AimHarderClient:
                 self.logger.error(f"Booking unsuccessful. There is no available credits. Max number of booked sessions reached.")
                 raise BookingFailed(MESSAGE_BOOKING_FAILED_NO_CREDIT)
             if "bookState" in response and response["bookState"] == -12:
+                
                 #errorMssgLang='ERROR_ANTELACION_CLIENTE_HORAS' => "You cannot book a class with less than X hours in advance. Too early."
                 #errorMssgLang='NOPUEDESRESERVAMISMAHORA' => "You cannot book the same session twice."
                 
@@ -89,8 +76,26 @@ class AimHarderClient:
                     self.logger.error(f"Booking unsuccessful. You cannot book the same session twice.")
                     raise AlreadyBooked(target_day)
             if "errorMssg" not in response and "errorMssgLang" not in response:
-                # booking went fine
+                # booking successful
                 self.logger.info(f"Booking completed successfully.")
+                return True
+        self.logger.error(f"UNKNOWN ERROR!!!!!.")
+        raise BookingFailed(MESSAGE_BOOKING_FAILED_UNKNOWN)
+    
+    def cancel_booked_class(self, target_class: str) -> bool:
+        response = self.session.post(
+            classes_endpoint(self.box_name),
+            data={
+                "id": target_class["id"],
+                "late": 0,
+                "familyId": "",
+            },
+        )
+        if response.status_code == HTTPStatus.OK:
+            response = response.json()
+            if "errorMssg" not in response and "errorMssgLang" not in response:
+                # booking cancellation successful
+                self.logger.info(f"Booking cancelled successfully.")
                 return True
         self.logger.error(f"UNKNOWN ERROR!!!!!.")
         raise BookingFailed(MESSAGE_BOOKING_FAILED_UNKNOWN)

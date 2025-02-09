@@ -24,35 +24,7 @@ def get_booking_goal_time(day: datetime, booking_goals):
         logger.error(f"Either the time or the name could not be found in the input parameters. There is no class to book on {day.strftime('%Y-%m-%d')}")
         raise NoTrainingDay
     
-def get_booking_goal_data(hours_in_advance: int, booking_goals: dict) -> tuple[datetime, str, str, bool]:
-
-    today = datetime.today()
-    target_day = today + timedelta(hours=hours_in_advance)
-    logger.info(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
-    for key, value in booking_goals.items():
-        if str(target_day.weekday()) == key:
-            target_time = value["time"]
-            target_datetime = datetime(target_day.year, target_day.month, target_day.day, int(target_time[:2]), int(target_time[2:]))
-            logger.info(f"Calculated target datetime: {target_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"Calculated target datetime: {target_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-            diff = target_datetime - today
-            diff_hours = diff.days * 24 + diff.seconds // 3600
-            logger.info(f"Diff in hours between target datetime and now: {diff_hours} (hours-in-advance={hours_in_advance})")
-            print(f"Diff in hours between target datetime and now: {diff_hours} (hours-in-advance={hours_in_advance})")
-            diff_minutes = (diff.seconds % 3600) // 60
-            if (diff_hours == hours_in_advance and diff_minutes == 0) or (diff_hours < hours_in_advance):
-                return (target_day, target_time, value["name"], True)
-                # print(f"Target: {today.year}-{today.month}-{today.day} {today.hour}:{today.minute}:{today.second}")
-                # print(f"Target: {target_datetime.year}-{target_datetime.month}-{target_datetime.day} {target_datetime.hour}:{target_datetime.minute}:{target_datetime.second}")
-                # print(f"")
-            else:
-                return (None, None, None, False)
-                # pass
-
-    raise NoTrainingDay(target_day)
-
-def get_booking_goal_data_yaml(booking_goals: dict) -> tuple[datetime, str, str, bool]:
+def get_booking_goal_data(booking_goals: dict) -> tuple[datetime, str, str, bool]:
 
     #Assuming that my class time is at 10.00am and the hours in advance is 49 hours. Given different examples, the results are the following ones:
     # today = datetime(2025,1,26,8,59,59,999999) => class datetime is 2025-01-28 10:00:00, diff_hours = 49, diff_minutes = 0,  diff_seconds = 3600,  diff_microseconds = 1.         Success = False
@@ -100,7 +72,7 @@ def get_booking_goal_data_yaml(booking_goals: dict) -> tuple[datetime, str, str,
             if (diff_hours == hours_in_advance and diff.microseconds == 0) or (diff_hours < hours_in_advance):
                 return (target_day, user_goal_time_str, user_goal_class_name_str, True)
             else:
-                return (None, None, None, False)
+                return (target_day, user_goal_time_str, user_goal_class_name_str, False)
 
     raise NoTrainingDay(target_day)
 
@@ -135,20 +107,27 @@ def init_telegram_bot(telegram_bot_token):
     logger.info(f"Telegram notifications are enabled.")
     return telebot.TeleBot(telegram_bot_token, parse_mode='Markdown')
 
+def parse_config_params(config):
+    try:
+        email = config["email"]
+        password = config["password"]
+        box_name = config["box-name"]
+        box_id = config["box-id"]
+        booking_goals = config["booking-goals"]
+        exceptions = config["exceptions"]
+        notify_on_telegram = True if "telegram" in config else False
+        if notify_on_telegram:
+            telegram_bot_token = config["telegram"]["telegram-bot-token"]
+            telegram_chat_id = config["telegram"]["telegram-chat-id"]
+        return email, password, box_name, box_id, booking_goals, exceptions, notify_on_telegram, telegram_bot_token, telegram_chat_id
+    except Exception as e:
+        logger.error(f"Error parsing configuration parameters: {e}")
+        raise e
+
 def main(user, configuration):
     try:
-        user = user
-        email = configuration["email"]
-        password = configuration["password"]
-        box_name = configuration["box-name"]
-        box_id = configuration["box-id"]
-        booking_goals = configuration["booking-goals"]
-        # hours_in_advance = configuration["hours-in-advance"]
-        exceptions = configuration["exceptions"]
-        notify_on_telegram = True if "telegram" in configuration else False
-        if notify_on_telegram:
-            telegram_bot_token = configuration["telegram"]["telegram-bot-token"]
-            telegram_chat_id = configuration["telegram"]["telegram-chat-id"]
+        #We parse the configuration parameters
+        email, password, box_name, box_id, booking_goals, exceptions, notify_on_telegram, telegram_bot_token, telegram_chat_id = parse_config_params(configuration)
 
         #If the Telegram notifications are enabled, we instantiate the Telegram Bot
         if notify_on_telegram and telegram_bot_token and telegram_chat_id:
@@ -156,43 +135,34 @@ def main(user, configuration):
         else:
             notify_on_telegram = False
 
-        # target_day, target_time, target_name, success = get_booking_goal_data(hours_in_advance, booking_goals)
-        class_day, class_time, class_name, success = get_booking_goal_data_yaml(booking_goals)
+        class_day, class_time, class_name, success = get_booking_goal_data(booking_goals)
         
         if not success:
-            logger.info(f"The class is not available yet or it is too late. Target date = {class_day.strftime('%Y-%m-%d')}")
+            logger.info(f"{user} - The class is not available yet or it is too late. Target date = {class_day.strftime('%Y-%m-%d')}. Class at: {class_time}")
             return
 
         #We log in into AimHarder platform
-        client = AimHarderClient(
-            email=email, password=password, box_id=box_id, box_name=box_name
-        )
-        logger.debug("Client connected to AimHarder.")
+        client = AimHarderClient(email=email, password=password, box_id=box_id, box_name=box_name)
+        logger.debug(f"{user} - Client connected to AimHarder.")
 
         #We fetch the classes that are scheduled for the target day
         classes = client.get_classes(class_day)
-
-        # bookState = None => class is not booked and ready to be booked
-        # bookState = 1 => class is already booked
-        # bookState = 0 => class is booked but you are in the waiting list
-        # waitlist = -1 => there is no max capacity on the waiting list
-        # waitlist = 6 => the max capacity on the waiting list is 6
-        
+       
         #From all the classes fetched, we select the one we want to book.
         target_class = get_class_to_book(classes, class_time, class_name)
         
         # bookState = 0 => class is already booked, bookState = 1 => class is booked but you are in the waiting list
         if target_class["bookState"] == 0 or target_class["bookState"] == 1:
-            logger.error("The class cannot be booked because it is already booked!")
+            logger.error(f"{user} - The class cannot be booked because it is already booked!")
             raise AlreadyBooked(class_day)
 
         #We book the class and notify to Telegram if required.
         if client.book_class(class_day, target_class):
             if notify_on_telegram:
-                bot.send_message(telegram_chat_id, f"\U00002705 Booked! :) {class_day.strftime('%b')}-CW{class_day.strftime('%V')} _{class_day.strftime('%A')} - {class_day.strftime('%Y-%m-%d')}_ at {class_time} - {class_name} [{target_class["ocupation"]} / {target_class["limit"]}]")
-            logger.debug(f"Training booked successfully!! :) {class_day.strftime('%A')} - {class_day.strftime('%Y-%m-%d')} at {class_time} -  {class_name}")
+                bot.send_message(telegram_chat_id, f"\U00002705 Booked! :) {class_day.strftime('%A')} - {class_day.strftime('%Y-%m-%d')}_ at {class_time} - {class_name} [{target_class["ocupation"]} / {target_class["limit"]}] ({target_class["id"]})")
+            logger.debug(f"{user} - Training booked successfully!! :) {class_day.strftime('%A')} - {class_day.strftime('%Y-%m-%d')} at {class_time} -  {class_name}")
         else:
-            logger.debug(f"Booking of the training unsuccessful. Target day: {class_day.strftime('%Y-%m-%d')}")
+            logger.debug(f"{user} - Booking of the training unsuccessful. Target day: {class_day.strftime('%Y-%m-%d')}")
     except BoxClosed:
         logger.error("The box is closed!")
         # if notify_on_telegram:
@@ -242,12 +212,8 @@ def init_logger():
     log_dir = os.path.join(os.path.normpath(os.getcwd() + os.sep), 'logs')
     log_fname = os.path.join(log_dir, 'aimharder-bot.log')
 
-    # Check whether the specified path exists or not
-    isExist = os.path.exists(log_dir)
-    if not isExist:
-        # Create a new directory because it does not exist
-        os.makedirs(log_dir)
-        print("The new directory is created!")
+    #Create folder if it does not exist
+    create_folder_if_not_exists(log_dir)
 
     logHandler = handlers.RotatingFileHandler(log_fname, maxBytes=5242880, backupCount=1)
     logHandler.setLevel(logging.DEBUG)
@@ -260,13 +226,18 @@ def init_logger():
     return logger
 
 def load_yaml_config():
-    with open('./config/aimharderbot_config.yaml', 'r') as file:
+    with open('config/aimharderbot_config.yaml', 'r') as file:
         loaded_config = yaml.safe_load(file)
-    # print(loaded_config)
     return loaded_config
 
+def create_folder_if_not_exists(folder):
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+
 if __name__ == "__main__":
- 
+
+    config_dir = os.path.join(os.path.normpath(os.getcwd() + os.sep), 'config')
+    create_folder_if_not_exists(config_dir)
     logger = init_logger()
 
     for config in load_yaml_config():
