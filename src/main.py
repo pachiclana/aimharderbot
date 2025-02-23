@@ -143,7 +143,7 @@ def parse_config_params(config):
         logger.error(f"{user_name} - Error parsing configuration parameters: {e}")
         raise e
 
-def main(user, configuration):
+def main(user_name, configuration):
     try:
         #We parse the configuration parameters
         email, password, box_name, box_id, booking_goals, exceptions, notify_on_telegram, telegram_bot_token, telegram_chat_id = parse_config_params(configuration)
