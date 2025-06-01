@@ -53,10 +53,10 @@ def create_folder_if_not_exists(folder):
 def get_booking_goal(booking_goals: dict) -> tuple[datetime, str, str, bool]:
 
     #Assuming that my class time is at 10.00am and the hours in advance is 49 hours. Given different examples, the results are the following ones:
-    # today = datetime(2025,1,26,8,59,59,999999) => class datetime is 2025-01-28 10:00:00, diff_hours = 49, diff_minutes = 0,  diff_seconds = 3600,  diff_microseconds = 1.         Success = False
-    # today = datetime(2025,1,26,9,0,0,000000)   => class datetime is 2025-01-28 10:00:00, diff_hours = 49, diff_minutes = 0,  diff_seconds = 3600,  diff_microseconds = 0.         Success = True
-    # today = datetime(2025,1,26,9,0,0,000001)   => class datetime is 2025-01-28 10:00:00, diff_hours = 48, diff_minutes = 59,  diff_seconds = 3599, diff_microseconds = 999999.    Success = True
-    # today = datetime(2025,1,26,9,0,1,000000)   => class datetime is 2025-01-28 10:00:00, diff_hours = 48, diff_minutes = 59, diff_seconds = 3599,  diff_microseconds = 0.         Success = True
+    # today = datetime(2025,1,26,8,59,59,999999) => class datetime is 2025-01-28 10:00:00, diff_hours = 49, diff_minutes = 0,  diff_seconds = 3600,  diff_microseconds = 1.       Success = False
+    # today = datetime(2025,1,26,9, 0, 0,000000) => class datetime is 2025-01-28 10:00:00, diff_hours = 49, diff_minutes = 0,  diff_seconds = 3600,  diff_microseconds = 0.       Success = True
+    # today = datetime(2025,1,26,9, 0, 0,000001) => class datetime is 2025-01-28 10:00:00, diff_hours = 48, diff_minutes = 59, diff_seconds = 3599,  diff_microseconds = 999999.  Success = True
+    # today = datetime(2025,1,26,9, 0, 1,000000) => class datetime is 2025-01-28 10:00:00, diff_hours = 48, diff_minutes = 59, diff_seconds = 3599,  diff_microseconds = 0.       Success = True
 
     today = datetime.today()
     # today = datetime(2025,2,8,20,2,0,000000) 
@@ -66,9 +66,9 @@ def get_booking_goal(booking_goals: dict) -> tuple[datetime, str, str, bool]:
         user_goal_day_str = goal.split(',')[0]
         user_goal_time_str = goal.split(',')[1]
         user_goal_class_name_str = goal.split(',')[2]
-        hours_in_advance = int(goal.split(',')[3])
+        user_goal_hours_in_advance = int(goal.split(',')[3])
 
-        target_day = today + timedelta(hours=hours_in_advance)
+        target_day = today + timedelta(hours=user_goal_hours_in_advance)
 
         logger.info(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
         # print(f"Calculated target date: {target_day.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -84,17 +84,48 @@ def get_booking_goal(booking_goals: dict) -> tuple[datetime, str, str, bool]:
             #We calculate the difference in hours between the datetime of the class and now
             diff = class_datetime - today
             diff_hours = diff.days * 24 + diff.seconds // 3600
-            logger.info(f"Diff in hours between class datetime and now: {diff_hours} (hours-in-advance={hours_in_advance})")
+            logger.info(f"Diff in hours between class datetime and now: {diff_hours} (hours-in-advance={user_goal_hours_in_advance})")
             # print(f"Diff in hours between class datetime and now: {diff_hours} (hours-in-advance={hours_in_advance})")
 
             #There are 2 conditions, one when it is exactly time o'clock (09:00:00:000000) and another one when the time is
-            # over o'clock (09:00:00:000001). With this condition we skip the case when the time is immediately before o'clock (08:59:59:999999)
-            if (diff_hours == hours_in_advance and diff.microseconds == 0) or (diff_hours < hours_in_advance):
+            # over o'clock (09:00:00:000001). With the condition below we skip the case when the time is immediately before o'clock (08:59:59:999999)
+            if (diff_hours == user_goal_hours_in_advance and diff.microseconds == 0) or (diff_hours < user_goal_hours_in_advance):
                 return (target_day, user_goal_time_str, user_goal_class_name_str, True)
             else:
                 return (target_day, user_goal_time_str, user_goal_class_name_str, False)
 
     raise NoTrainingDay(target_day)
+
+def process_exceptions(exceptions: list, booking_goals: list)  -> list:
+    #skip => if the target day matches the day to skip, we have to ignore that date. No matter the time
+
+    #In case there are exceptions, we process them. If not, we return the original booking goals list
+    if exceptions:
+        new_booking_goals = []
+        skip_exceptions = [try_parsing_date(exception.split(';')[1]).date() for exception in exceptions if exception.split(';')[0] == 'skip']
+        overwrite_exceptions = [try_parsing_date(exception.split(';')[1].split(',')[0]).date() for exception in exceptions if exception.split(';')[0] == 'overwrite']
+
+        for goal in booking_goals:
+            user_goal_hours_in_advance = int(goal.split(',')[3])
+
+            target_day = datetime.today() + timedelta(hours=user_goal_hours_in_advance)
+
+            # If the target date is within the exceptions list, we have to skip that day. If not in the exceptions, we have to add it to the new list if it is not already there.
+            if target_day.date() not in skip_exceptions:
+                if goal not in new_booking_goals:
+                    new_booking_goals.append(goal)
+
+        return new_booking_goals
+    else:
+        return booking_goals
+
+def try_parsing_date(text):
+    for fmt in ('%Y.%m.%d', '%Y/%m/%d', '%d.%m.%Y', '%d/%m/%Y'):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            pass
+    raise ValueError('No valid exception date format found')
 
 def get_class_to_book(classes: list[dict], target_time: str, class_name: str) -> dict:
     if len(classes) == 0:
@@ -133,7 +164,7 @@ def parse_config_params(config):
         box_name = config["box-name"]
         box_id = config["box-id"]
         booking_goals = config["booking-goals"]
-        exceptions = config["exceptions"]
+        exceptions = {} if not "exceptions" in config else config["exceptions"]
         notify_on_telegram = True if "telegram" in config else False
         if notify_on_telegram:
             telegram_bot_token = config["telegram"]["telegram-bot-token"]
@@ -154,7 +185,8 @@ def main(current_user, configuration):
         else:
             notify_on_telegram = False
 
-        class_day, class_time, class_name, success = get_booking_goal(booking_goals)
+        booking_goals_after_exceptions = process_exceptions(exceptions, booking_goals)
+        class_day, class_time, class_name, success = get_booking_goal(booking_goals_after_exceptions)
 
         if not success:
             logger.info(f"{current_user} - The class is not available yet or it is too late. Target date = {class_day.strftime('%Y-%m-%d')}. Class at: {class_time}")
@@ -169,12 +201,15 @@ def main(current_user, configuration):
 
         #We check if there is already a class booked on the target day. If so, we skip the booking process.
         #bookState = 0 => class is already booked, bookState = 1 => class is booked but you are in the waiting list
-        if any((class_item['bookState'] == 1 or class_item['bookState'] == 0) for class_item in classes):
-            logger.error(f"{current_user} - The target class or another class is already booked on the target day!")
-            raise AlreadyBooked(class_day)
+        # if any((class_item['bookState'] == 1 or class_item['bookState'] == 0) for class_item in classes):
+        #     logger.error(f"{current_user} - The target class or another class is already booked on the target day!")
+        #     raise AlreadyBooked(class_day)
 
         #From all the classes fetched, we select the one we want to book.
         target_class = get_class_to_book(classes, class_time, class_name)
+        if target_class['bookState'] == 1 or target_class['bookState'] == 0:
+            logger.error(f"{current_user} - The target class or another class is already booked on the target day!")
+            raise AlreadyBooked(class_day)
 
         #We book the class and notify to Telegram if required.
         if client.book_class(class_day, target_class):
