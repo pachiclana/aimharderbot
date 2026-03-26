@@ -103,7 +103,11 @@ def process_exceptions(exceptions: list, booking_goals: list)  -> list:
     if exceptions:
         new_booking_goals = []
         skip_exceptions = [try_parsing_date(exception.split(';')[1]).date() for exception in exceptions if exception.split(';')[0] == 'skip']
-        overwrite_exceptions = [try_parsing_date(exception.split(';')[1].split(',')[0]).date() for exception in exceptions if exception.split(';')[0] == 'overwrite']
+        overwrite_exceptions = [[try_parsing_date(exception.split(';')[1].split(',')[0]).date(), exception.split(';')[1].split(',')[1:]] for exception in exceptions if exception.split(';')[0] == 'overwrite']
+        overwrite_exceptions_dict = {try_parsing_date(exception.split(';')[1].split(',')[0]).date(): exception.split(';')[1].split(',')[1:] for exception in exceptions if exception.split(';')[0] == 'overwrite'}
+        print(f"{type(skip_exceptions)}")
+        print(f"{type(overwrite_exceptions)}")
+
 
         for goal in booking_goals:
             user_goal_hours_in_advance = int(goal.split(',')[3])
@@ -114,6 +118,16 @@ def process_exceptions(exceptions: list, booking_goals: list)  -> list:
             if target_day.date() not in skip_exceptions:
                 if goal not in new_booking_goals:
                     new_booking_goals.append(goal)
+            else:
+                # If the target date is in the skip exceptions, we skip the goal
+                logger.info(f"Skipping goal for {target_day.strftime('%Y-%m-%d')} as it is in the skip exceptions.")
+                continue
+
+            if target_day.date() in overwrite_exceptions_dict:
+                # If the target date is in the overwrite exceptions, we overwrite the goal with the new one
+                new_goal = f"{target_day.strftime('%A').lower()},{overwrite_exceptions_dict[target_day.date()][0]},{overwrite_exceptions_dict[target_day.date()][1]},{goal.split(',')[3]}"
+                if new_goal not in new_booking_goals:
+                    new_booking_goals.append(new_goal)
 
         return new_booking_goals
     else:
@@ -214,7 +228,8 @@ def main(current_user, configuration):
         #We book the class and notify to Telegram if required.
         if client.book_class(class_day, target_class):
             if notify_on_telegram:
-                bot.send_message(telegram_chat_id, f"\U00002705 {class_name}! _{class_day.strftime('%A')}_ {class_day.strftime('%d.%m.%Y')} at {class_time[:2]}:{class_time[2:]} - [{target_class["ocupation"]}/{target_class["limit"]}] ({target_class["id"]})")
+                pass
+#               bot.send_message(telegram_chat_id, f"\U00002705 {class_name}! _{class_day.strftime('%A')}_ {class_day.strftime('%d.%m.%Y')} at {class_time[:2]}:{class_time[2:]} - [{target_class["ocupation"]}/{target_class["limit"]}] ({target_class["id"]})")
             logger.debug(f"{current_user} - Training booked successfully!! {class_day.strftime('%A')} - {class_day.strftime('%Y-%m-%d')} at {class_time} -  {class_name}")
         else:
             logger.debug(f"{current_user} - Booking of the training unsuccessful. Target day: {class_day.strftime('%Y-%m-%d')}")
